@@ -131,3 +131,25 @@ FOREIGN KEY (order_id) REFERENCES d_pedido (order_id),
 FOREIGN KEY (product_id) REFERENCES d_produto (product_id), 
 FOREIGN KEY (seller_id) REFERENCES d_sellers (seller_id)
 );
+
+CREATE TABLE f_venda(
+order_id     varchar(35),
+seller_id     varchar(35) NOT NULL,
+customer_id varchar(35) not NULL,
+payment_id varchar(35),
+review_id varchar(35),
+campanha_id varchar(35),
+delivery_id varchar(35),
+purchase_date date NOT NULL,
+valor_venda	  numeric(9,2) NOT NULL,
+valor_frete   numeric(6,2) NOT NULL,
+qty_itens numeric(6,2) NOT null, 
+PRIMARY KEY (order_id),
+FOREIGN KEY (order_id) REFERENCES d_pedido (order_id),
+FOREIGN KEY (seller_id) REFERENCES d_sellers (seller_id),
+FOREIGN KEY (customer_id) REFERENCES d_cliente (customer_id), 
+FOREIGN KEY (payment_id) REFERENCES d_pagamento (payment_id), 
+FOREIGN KEY (campanha_id) REFERENCES d_campanha (campanha_id), 
+FOREIGN KEY (delivery_id) REFERENCES d_frete (delivery_id), 
+FOREIGN KEY (review_id) REFERENCES d_reviews (review_id)
+);
