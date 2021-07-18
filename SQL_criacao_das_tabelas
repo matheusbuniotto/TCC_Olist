@@ -122,6 +122,15 @@ FOREIGN KEY (product_id) REFERENCES d_produto (product_id),
 FOREIGN KEY (seller_id) REFERENCES d_sellers (seller_id)
 );
 
+CREATE TABLE d_tempo (
+	"data" date NOT NULL,
+	dia integer NOT NULL,
+	mes integer NOT NULL,
+	ano integer NOT NULL,
+	nome_mes varchar(10) NOT NULL,
+	CONSTRAINT d_tempo_pk PRIMARY KEY ("data")
+);
+
 CREATE TABLE f_pedido(
 order_id     varchar(35),
 seller_id     varchar(35) NOT NULL,
