@@ -149,6 +149,7 @@ FOREIGN KEY (customer_id) REFERENCES d_cliente (customer_id),
 FOREIGN KEY (payment_id) REFERENCES d_pagamento (payment_id), 
 FOREIGN KEY (campanha_id) REFERENCES d_campanha (campanha_id), 
 FOREIGN KEY (delivery_id) REFERENCES d_frete (delivery_id), 
-FOREIGN KEY (review_id) REFERENCES d_reviews (review_id)
+FOREIGN KEY (review_id) REFERENCES d_reviews (review_id),
+FOREIGN KEY (purchase_date) REFERENCES d_tempo(data);
 );
 
