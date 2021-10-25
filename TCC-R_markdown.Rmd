@@ -2,7 +2,9 @@
 title: "TCC"
 author: "Matheus"
 date: "10/10/2021"
-output: html_document
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 ### Importando as bibliotecas utilizadas
@@ -18,6 +20,8 @@ library("tm")
 library(patchwork)
 
 ```
+
+## Preparando os dados
 
 #### Carregando os conjuntos de dados
 
@@ -78,3 +82,117 @@ df_a <- merge(itens, produtos, by = 'product_id')
 df_b <- merge(clientes, pedidos, by = 'customer_id')
 df <- merge(df_a, df_b)
 ```
+
+## Análise dos dados
+
+Nessa análise vamos explorar os dados regionais e de produtos para entender as oportunidades e ameaças.
+
+### Como é a distribuição de receita entre as categorias?
+
+```{r}
+df%>% 
+  group_by(product_category_name)%>%
+  summarise(vol=sum(price))%>%
+  mutate(rank=rank(-vol))%>%
+  arrange(rank)%>%
+  mutate(cum=cumsum(vol))%>%
+  mutate(cumper=cum/max(cum))%>%
+  ggplot(aes(x=as.factor(rank),y=cumper,fill=rank))+
+  geom_col(color="white",size=0.001, alpha=0.9)+
+  theme_light()+
+  theme(legend.position = "none",
+        axis.text.x = element_text(size=7))+
+        geom_vline(xintercept = 15,color="red")+
+        labs(x="Ranking",y="% Cumulada da Receita")
+```
+
+No conjunto de dados, 15 categorias representam mais de 75% da receita cumulada no período analisado.
+
+Essas categorias são:
+
+```{r}
+### top 15 categorias
+df %>%
+  group_by(product_category_name)%>%
+  summarise(vol=sum(price))%>%
+  mutate(ShareVol=vol/sum(vol))%>%
+  filter(vol>80000/0.3)%>%
+  ggplot(aes(x=reorder(product_category_name,vol),y=ShareVol))+
+  geom_col(aes(fill=vol))+
+  theme_minimal()+
+  labs(x="",y="% da Receita Total")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1),
+        legend.position="none")+
+  scale_y_continuous(labels = function(x) paste0(x*100, "%"))+
+  coord_flip()
+```
+
+### Análise Regional
+
+Como é a relação de frete e peso dos produtos nas regiões?
+
+```{r}
+## peso x frete
+df %>%
+  filter(!is.na(product_weight_g), product_weight_g > 0, product_weight_g < 30000,(!is.na(freight_value))) %>%
+  ggplot(aes(x = freight_value, y = product_weight_g, color = Regiao)) + 
+  geom_point()+
+  theme(legend.position = "none")+
+  labs(y = "Peso do produto em gramas", x = "Valor do frete")+ 
+  facet_grid( Regiao ~. )
+
+```
+
+Apesar da distribuição do peso dos produtos comprados ser parecida entre todas as regiões, o frete para as regiões norte e nordeste é maior do que para as regiões Sudeste, Sul e Centro-oeste.
+
+Qual a relevância desses compradores que pagam mais pelo frete? Existe vendedores que podem suprir essa demanda regional?
+
+```{r}
+#clientes %
+plot_clientes <-ggplot(data = clientes, aes(x=Regiao, fill =Regiao))+  
+  geom_bar(aes(y = (..count..)/sum(..count..)))+
+  geom_text(aes(label = scales::percent(round((..count..)/sum(..count..),3)),
+                y= ((..count..)/sum(..count..))), stat="count",
+            vjust = -.25)+
+  theme(axis.title.y=element_blank(),
+        plot.title = element_text(hjust = 0.5),
+        legend.position ="none")+
+  labs(y = "", x = "")+
+  coord_cartesian(ylim = c(0, 1))+
+  scale_y_continuous(labels = function(x) paste0(x*100, "%"))+
+  ggtitle('Clientes por Região')
+
+#sellers %
+plot_seller <- ggplot(data = sellers, aes(x=Regiao, fill =Regiao))+  
+  geom_bar(aes(y = (..count..)/sum(..count..)))+
+  geom_text(aes(label = scales::percent(round((..count..)/sum(..count..),3)),
+                y= ((..count..)/sum(..count..))), stat="count",
+            vjust = -.25)+
+  theme(axis.title.y=element_blank(),
+        plot.title = element_text(hjust = 0.5),
+        legend.position ="none")+
+  labs(y = "", x = "")+
+  coord_cartesian(ylim = c(0, 1))+
+  scale_y_continuous(labels = function(x) paste0(x*100, "%"))+
+    ggtitle('Vendedores por Região')
+
+ plot_seller+ plot_clientes 
+
+```
+
+A região nordeste representa 9,4% dos compradores do site, porém só possuí 1,8% dos vendedores cadastrados. Isso indica que a concentração de vendedores nos estados do sul e sudeste encarece as compras dos consumidores das regiões Norte e Nordeste.
+
+Essa maior demora do frete e valor elevado causa uma menor satisfação dos clientes apresentando uma distribuição maior de notas menores que 4.
+
+```{r}
+ df %>%
+  left_join(review) %>%
+  ggplot(aes(y = review_score, fill = Regiao)) + 
+  geom_boxplot()+
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank())+
+  facet_grid(. ~ Regiao)
+```
+
+Esses clientes também pagam um valor proporcionalmente maior nos produtos em relação ao
