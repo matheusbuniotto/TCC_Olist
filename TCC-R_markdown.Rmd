@@ -1,0 +1,80 @@
+---
+title: "TCC"
+author: "Matheus"
+date: "10/10/2021"
+output: html_document
+---
+
+### Importando as bibliotecas utilizadas
+
+```{r}
+library('RColorBrewer')
+library('tidyverse')
+if (!require(scales)) install.packages("scales")
+library(lubridate)
+library(wordcloud)
+library(wordcloud2)
+library("tm")
+library(patchwork)
+
+```
+
+#### Carregando os conjuntos de dados
+
+Os conjuntos de dados são importandos utilizando a função read.csv. Para essa análise serão utilizados os datasets de **produtos, itens, pedidos, clientes, review e vendedores.**
+
+```{r}
+produtos <- read_csv("~/TCC/Olist/db_original/olist_products_dataset.csv")
+itens <- read.csv("~/TCC/Olist/db_original/olist_order_items_dataset.csv")
+pedidos <- read.csv("~/TCC/Olist/db_original/olist_orders_dataset.csv")
+clientes <- read.csv("~/TCC/Olist/db_original/olist_customers_dataset.csv")
+review <- read.csv("TCC/Olist/db_original/olist_order_reviews_dataset.csv")
+sellers <- read.csv("TCC/Olist/db_original/olist_sellers_dataset.csv")
+```
+
+### Classificando as regiões dos clientes/vendedores
+
+Para analisar os clientes e vendedores os dados de cidade/cep serão agrupados por regiões.
+
+```{r}
+#Criando as regiões
+sudeste <- c('SP', 'MG', 'RJ', 'ES')
+sul <- c('RS', 'PR', 'SC')
+centro_oeste <- c('GO', 'MT', 'MS', 'DF')
+nordeste <- c('MA', 'CE', 'PI', 'BA', 'AL', 'SE', 'RN', 'PB', 'PE')
+norte <- c('AC', 'AM', 'RR', 'PA', 'AP', 'TO', 'RO')
+```
+
+Após criar as listas de regiões vou segmentar os clientes e vendedores de acordo com a sua cidade.
+
+```{r}
+# classificar estados em regiões
+clientes <- clientes %>% mutate(Regiao = case_when(
+  (customer_state %in% sudeste ~ 'Sudeste'),
+  (customer_state %in% sul ~ 'Sul'),
+  (customer_state %in% norte ~ 'Norte'),
+  (customer_state %in% nordeste ~ 'Nordeste'),
+  (customer_state %in% centro_oeste ~ 'Centro-Oeste')))
+```
+
+```{r}
+# classificar estados em regiões
+sellers <- sellers %>% 
+  mutate(Regiao = case_when(
+  (seller_state %in% sudeste ~ 'Sudeste'),
+  (seller_state %in% sul ~ 'Sul'),
+  (seller_state %in% norte ~ 'Norte'),
+  (seller_state %in% nordeste ~ 'Nordeste'),
+  (seller_state %in% centro_oeste ~ 'Centro-Oeste')))
+```
+
+### JOIN - Mesclando os conjuntos de dados
+
+Vamos fazer o "join" dos conjuntos de dados para referênciar e combinar as tabelas.
+
+```{r}
+#combinar os datasets (joins)
+df_a <- merge(itens, produtos, by = 'product_id')
+df_b <- merge(clientes, pedidos, by = 'customer_id')
+df <- merge(df_a, df_b)
+```
