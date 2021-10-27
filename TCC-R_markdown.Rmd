@@ -18,7 +18,7 @@ library(wordcloud)
 library(wordcloud2)
 library("tm")
 library(patchwork)
-
+library(formattable)
 ```
 
 ## Preparando os dados
@@ -28,7 +28,7 @@ library(patchwork)
 Os conjuntos de dados são importandos utilizando a função read.csv. Para essa análise serão utilizados os datasets de **produtos, itens, pedidos, clientes, review e vendedores.**
 
 ```{r}
-produtos <- read_csv("~/TCC/Olist/db_original/olist_products_dataset.csv")
+produtos <- read.csv("~/TCC/Olist/db_original/olist_products_dataset.csv")
 itens <- read.csv("~/TCC/Olist/db_original/olist_order_items_dataset.csv")
 pedidos <- read.csv("~/TCC/Olist/db_original/olist_orders_dataset.csv")
 clientes <- read.csv("~/TCC/Olist/db_original/olist_customers_dataset.csv")
@@ -195,4 +195,56 @@ Essa maior demora do frete e valor elevado causa uma menor satisfação dos clie
   facet_grid(. ~ Regiao)
 ```
 
-Esses clientes também pagam um valor proporcionalmente maior nos produtos em relação ao
+Filtrando as avaliações maiores que 3 e menores que 3 temos o seguinte cenário:
+
+```{r}
+f1<- pedidos %>%
+  left_join(clientes) %>%
+  left_join(review) %>%
+  left_join(itens) %>%
+  filter(review_score > 3)%>%
+ggplot(aes(x = tempo_frete, y = Regiao, fill = Regiao)) +
+  geom_density_ridges() +
+  theme_ridges() + 
+  theme(legend.position = "none")+
+  coord_cartesian(xlim = c(0, 50))+
+  geom_vline(xintercept = mean((na.omit(pedidos$tempo_frete))),color="red")
+
+
+f2 <- pedidos %>%
+  left_join(clientes) %>%
+  left_join(review) %>%
+  left_join(itens) %>%
+  filter(review_score < 3)%>%
+  ggplot(aes(x = tempo_frete, y = Regiao, fill = Regiao)) +
+  geom_density_ridges() +
+  theme_ridges() + 
+  theme(legend.position = "none")+
+  coord_cartesian(xlim = c(0, 50))+
+  geom_vline(xintercept = mean((na.omit(pedidos$tempo_frete))),color="red", label = "med")
+
+f1+f2
+```
+
+As pessoas que avaliaram de forma média ou negativa, em média, demoram mais para receber o produto, principalmente nas regiões norte e nordeste. Além de pagar mais caro, os clientes dessas regiões demoram mais para receber o produto e em média ficam menos satisfeitas do que os clientes das outras regiões.
+
+```{r}
+#tabela frete x review
+tab<- pedidos %>%
+  left_join(clientes) %>%
+  left_join(review) %>%
+  left_join(itens) %>%
+  group_by(Regiao) %>%
+  summarise(med_frete = format(round(mean(na.omit(freight_value)),2)),
+            med_review=format(round(mean(review_score),2)),
+            dias_entrega=format(round(mean(na.omit(tempo_frete)),2)))
+                                                
+#tabela
+formattable(tab, list(
+  med_frete = color_tile("transparent", "lightpink"),
+  med_review =color_tile("lightpink", "transparent"),
+  dias_entrega = color_tile("transparent", "lightpink")))
+
+```
+
+Nos aprofundando um pouco mais nesse valor de frete, vemos que a porcentagem paga em relação aos produtos é muito maior para os clientes dessa região. Na região Sudeste o frete representa no máximo 50% do valor produto. Já ná região nordeste para várias categorias esse valor ultrapassa 100%.
