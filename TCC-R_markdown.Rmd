@@ -248,3 +248,123 @@ formattable(tab, list(
 ```
 
 Nos aprofundando um pouco mais nesse valor de frete, vemos que a porcentagem paga em relação aos produtos é muito maior para os clientes dessa região. Na região Sudeste o frete representa no máximo 50% do valor produto. Já ná região nordeste para várias categorias esse valor ultrapassa 100%.
+
+```{r}
+#sudeste frete x valor
+df %>%
+  group_by(product_category_name, Regiao)%>%
+  summarise(porcentagem=sum(freight_value)/sum(price),vol=sum(price))%>%
+  arrange(desc(porcentagem))%>%
+  filter(porcentagem>0.22, Regiao == 'Sudeste')%>%
+  ggplot(aes(x=reorder(product_category_name,porcentagem),y=porcentagem))+
+  geom_col(aes(fill=vol<80000/0.3))+
+  geom_text(aes(label = scales::percent(round((porcentagem),2), colour = "black"),   hjust=1.2))+
+  coord_flip()+
+  theme_minimal()+
+  labs(x="",y="Valor do Frete / Valor do produto")+
+  scale_y_continuous(labels = function(x) paste0(x*100, "%"))+
+      theme(legend.position = 'none')
+
+
+  #nordeste
+  df %>%
+  group_by(product_category_name, Regiao)%>%
+  summarise(porcentagem=sum(freight_value)/sum(price),vol=sum(price))%>%
+  arrange(desc(porcentagem))%>%
+  filter(porcentagem>0.43, Regiao == 'Nordeste')%>%
+  ggplot(aes(x=reorder(product_category_name,porcentagem),y=porcentagem))+
+  geom_col(aes(fill=vol<80000/0.3))+
+  geom_text(aes(label = scales::percent(round((porcentagem),2), colour = "black"),   hjust=1.2))+
+  coord_flip()+
+  theme_minimal()+
+  labs(x="",y="Valor do Frete / Valor do produto")+
+  scale_y_continuous(labels = function(x) paste0(x*100, "%"))+
+    theme(legend.position = 'none')
+
+```
+
+Quando analisamos a relação entre Ticket Médio e valor do frete por região vemos uma clara relação entre essas variavéis. Os clientes das regiões com um valor de frete mais elevado tendem a fazer compras com ticket médio maior, reforçando a hipótese que a proporção do valor do frete sobre o valor do produto influência nas escolhas dos clientes.
+
+```{r}
+#ticket médio regional
+df %>%
+  filter(!is.na(freight_value), freight_value > 0, price > 0) %>%
+  group_by(order_id) %>%
+  group_by(Regiao) %>%
+  summarise(tm=mean(price), fv=mean(freight_value)) %>%
+  ggplot(aes(y=tm, x=fv, color =Regiao))+
+  geom_point(size = 5, shape = 'circle')+
+  geom_text(aes(label = Regiao, vjust = -1))+
+  geom_text(aes(label = round(tm,1), vjust = 2))+
+    stat_smooth(method = "lm", col = "red")+
+  coord_cartesian(ylim = c(100, 200), xlim = c(17,37))+
+  labs(x = 'Média do Frete', y = "Ticket Médio")
+  theme_light()
+```
+
+### Análise de avaliações 
+
+Para complementar a análise das avaliações podemos utilizar uma nuvem de palavaras para sumarizar as palavras mais citadas nas avaliações dos clientes. Nessa análise vamos filtrar os clientes que avaliaram sua compra com uma nota menor que 4.
+
+```{r}
+#criando a numve de palavras
+#preparando os dados
+wc_baixo <- review %>%
+  filter(review_score < 4) 
+
+wc_baixo <-  na.omit(wc_baixo$review_comment_message)
+
+docs <- Corpus(VectorSource(wc_baixo))
+tm_map(docs, function(x) iconv(enc2utf8(x), sub = "byte"))
+tm_map(docs, function(x) iconv(x, to='UTF-8-MAC', sub='byte'))
+
+##limpar o texto
+toSpace <- content_transformer(function (x , pattern ) gsub(pattern, " ", x))
+docs <- tm_map(docs, toSpace, "/")
+docs <- tm_map(docs, toSpace, "@")
+docs <- tm_map(docs, toSpace, "\\|")
+
+docs <- tm_map(docs, content_transformer(tolower))
+docs <- tm_map(docs, removeWords, c("de", "para", "eu", "a", "e", "da", "do", 'que', 'com')) 
+docs <- tm_map(docs, removePunctuation)
+docs <- tm_map(docs, stripWhitespace)
+
+#transformar
+dtm <- TermDocumentMatrix(docs)
+m <- as.matrix(dtm)
+v <- sort(rowSums(m),decreasing=TRUE)
+d <- data.frame(word = names(v),freq=v)
+head(d, 10)
+
+#visualização
+set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 3,
+          max.words=300, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+```
+
+### Recomendações
+
+```{r}
+clientes_nordeste <- clientes %>%
+  filter(Regiao == 'Nordeste') %>%
+  group_by(customer_city) %>%
+  count() 
+
+clientes_nordeste <-as.data.frame(clientes_nordeste)
+clientes_nordeste
+  
+#clientes da cidades do nordeste
+clientes_nordeste %>% 
+  filter(n > 150) %>%
+ggplot(aes(x= reorder(customer_city, n), y=n, fill = customer_city)) +
+  geom_bar(stat='identity')+
+  coord_flip()+
+  geom_text(aes(label = n), hjust = 1.5, colour = "black")+
+  labs(y = "Qtd. Clientes", x = "")+
+  ggtitle('Clientes por Cidade no Nordeste')+
+  theme(legend.position = 'none')+
+  theme_light()
+
+```
