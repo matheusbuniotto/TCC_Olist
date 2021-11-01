@@ -302,7 +302,7 @@ df %>%
   theme_light()
 ```
 
-### Análise de avaliações 
+### Análise de avaliações
 
 Para complementar a análise das avaliações podemos utilizar uma nuvem de palavaras para sumarizar as palavras mais citadas nas avaliações dos clientes. Nessa análise vamos filtrar os clientes que avaliaram sua compra com uma nota menor que 4.
 
@@ -344,7 +344,7 @@ wordcloud(words = d$word, freq = d$freq, min.freq = 3,
 
 ```
 
-### Recomendações
+### Clientes e vendedores por cidade na região nordeste
 
 ```{r}
 clientes_nordeste <- clientes %>%
@@ -367,4 +367,26 @@ ggplot(aes(x= reorder(customer_city, n), y=n, fill = customer_city)) +
   theme(legend.position = 'none')+
   theme_light()
 
+```
+
+```{r}
+vendedores_nordeste <- sellers %>%
+  filter(Regiao == 'Nordeste') %>%
+  group_by(seller_city) %>%
+  count() 
+
+vendedores_nordeste <-as.data.frame(vendedores_nordeste)
+vendedores_nordeste
+  
+#clientes da cidades do nordeste
+vendedores_nordeste %>% 
+  filter(n > 1) %>%
+ggplot(aes(x= reorder(seller_city, n), y=n, fill = seller_city)) +
+  geom_bar(stat='identity')+
+  coord_flip()+
+  geom_text(aes(label = n), hjust = 1.5, colour = "black")+
+  labs(y = "Qtd. Vendedores", x = "")+
+  ggtitle('Vendedores por Cidade no Nordeste')+
+  theme(legend.position = 'none')+
+  theme_light()
 ```
