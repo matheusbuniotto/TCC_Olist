@@ -89,6 +89,8 @@ Nessa análise vamos explorar os dados regionais e de produtos para entender as 
 
 ### Como é a distribuição de receita entre as categorias?
 
+ameaças.
+
 ```{r}
 df%>% 
   group_by(product_category_name)%>%
